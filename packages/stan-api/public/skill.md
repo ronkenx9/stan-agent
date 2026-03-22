@@ -118,6 +118,22 @@ The longer since STAN's last tip, the larger the next one:
 
 This rewards patience and prevents tip spam.
 
+## Safety Architecture — Off-Chain Caveat Enforcement
+
+STAN implements a layered off-chain caveat enforcer pattern modelled on ERC-7710 delegation caveats. Before any USDT transfer executes, the Brain runs every gate in sequence. If any gate fails, the tip is rejected — no funds move.
+
+| Gate | Enforcer Analogue | Rule |
+|------|-------------------|------|
+| Daily spend cap | `erc20PeriodTransfer` | Total tips in 24h window ≤ `maxDailySpend` |
+| Momentum threshold | `beforeHook` validation | Momentum score must exceed configured minimum |
+| Conviction tier | `LimitedCalls` guard | Only HIGH (1.5×) or MAX (2.0×) conviction clears the gate by default |
+| Cooldown period | `Timestamp` enforcer | Minimum elapsed time since last tip before next can fire |
+| Yield guard | `beforeHook` balance check | Withdraw only from accrued yield, never principal (when yield mode enabled) |
+
+All five gates must pass before the WDK wallet signs a transaction. This is the same **all-or-nothing before-execution principle** as on-chain caveat enforcers — the difference is that STAN enforces these rules in the server-side Brain rather than in an EVM hook, giving users the same spending discipline without requiring smart account infrastructure.
+
+> The Brain is STAN's caveat enforcer stack: it holds authority over the WDK wallet and delegates spend only when every configured constraint is satisfied.
+
 ## Tech Stack
 
 - **Wallet**: Tether WDK (`@tetherto/wdk-wallet-evm`)
@@ -125,5 +141,6 @@ This rewards patience and prevents tip spam.
 - **Chain**: Arbitrum One (Chain ID 42161)
 - **Token**: USDT (`0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9`)
 - **AI Reasoning**: Groq llama3-8b (optional — one-sentence tip rationale per tip)
+- **Safety**: Off-chain caveat enforcer pattern (5-gate Brain validation before every tx)
 - **Runtime**: Node.js + Express + TypeScript ESM
-- **Dashboard**: Retro RPG pixel UI with real-time SSE feed
+- **Dashboard**: GODSEYE amber UI with real-time SSE feed
