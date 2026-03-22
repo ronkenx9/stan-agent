@@ -1,0 +1,1311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>STAN — Super-Fan Agent</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    /* ═══════════════════════════════════════════
+       GODSEYE DESIGN SYSTEM — STAN EDITION
+       ═══════════════════════════════════════════ */
+    :root {
+      --amber:       #E8820C;
+      --amber-dim:   #b3620a;
+      --amber-glow:  rgba(232,130,12,0.18);
+      --amber-soft:  rgba(232,130,12,0.08);
+      --bone:        #F0EDE8;
+      --bone-dim:    #b8b4af;
+      --black:       #050505;
+      --dark:        #0d0d0d;
+      --surface:     #111111;
+      --surface-2:   #181818;
+      --border:      #222222;
+      --border-hot:  #2e1e08;
+      --cyan:        #22D3EE;
+      --cyan-glow:   rgba(34,211,238,0.15);
+      --green:       #4ade80;
+      --red:         #f87171;
+      --yellow:      #fbbf24;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--black);
+      color: var(--bone);
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0 20px 60px;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* ── SCANLINES ── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.18) 2px,
+        rgba(0,0,0,0.18) 4px
+      );
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    /* ── NOISE GRAIN ── */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 9998;
+      opacity: 0.5;
+    }
+
+    /* ═══ HEADER ═══ */
+    .site-header {
+      width: 100%;
+      max-width: 1120px;
+      padding: 32px 0 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+      position: relative;
+    }
+
+    .header-eyebrow {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.35em;
+      color: var(--amber);
+      text-transform: uppercase;
+      margin-bottom: 6px;
+    }
+
+    .main-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(64px, 10vw, 110px);
+      letter-spacing: 0.06em;
+      line-height: 0.9;
+      color: var(--bone);
+      text-align: center;
+      position: relative;
+    }
+
+    .main-title span {
+      color: var(--amber);
+      position: relative;
+    }
+
+    .title-sub {
+      font-family: 'Space Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.2em;
+      color: var(--bone-dim);
+      text-transform: uppercase;
+      margin-top: 8px;
+    }
+
+    .always-on-tagline {
+      margin: 18px auto 0;
+      max-width: 560px;
+      padding: 10px 22px;
+      border: 1px solid var(--border-hot);
+      background: var(--amber-soft);
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      color: var(--bone-dim);
+      text-align: center;
+      line-height: 1.7;
+    }
+
+    .always-on-tagline span { color: var(--amber); }
+
+    /* ═══ STATUS BAR ═══ */
+    .status-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 32px;
+      width: 100%;
+      max-width: 1120px;
+      padding: 16px 0;
+      margin-top: 24px;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      color: #555;
+    }
+
+    .status-item { display: flex; align-items: center; gap: 8px; }
+    .status-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: #333; flex-shrink: 0;
+    }
+    .status-dot.online {
+      background: var(--green);
+      box-shadow: 0 0 8px var(--green);
+      animation: blink 2s ease-in-out infinite;
+    }
+    @keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+
+    .status-val { color: var(--bone-dim); }
+
+    /* ═══ VAULT TOTAL ═══ */
+    .vault-strip {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      width: 100%;
+      max-width: 1120px;
+      padding: 20px 0 24px;
+    }
+
+    .vault-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.25em;
+      color: #444;
+      text-transform: uppercase;
+    }
+
+    .vault-value {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 36px;
+      letter-spacing: 0.08em;
+      color: var(--amber);
+      text-shadow: 0 0 24px var(--amber-glow);
+    }
+
+    .vault-divider {
+      width: 1px; height: 24px;
+      background: var(--border);
+    }
+
+    /* ═══ GRID ═══ */
+    .party-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 20px;
+      width: 100%;
+      max-width: 1120px;
+      margin-bottom: 20px;
+    }
+
+    /* ═══ CARDS ═══ */
+    .char-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 24px;
+      position: relative;
+      transition: border-color 0.2s;
+    }
+
+    .char-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--amber), transparent);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .char-card:hover::before { opacity: 1; }
+    .char-card:hover { border-color: var(--border-hot); }
+
+    .char-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .char-avatar {
+      width: 52px; height: 52px;
+      border: 1px solid var(--border);
+      background: var(--dark);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 22px;
+      position: relative;
+    }
+
+    .char-avatar canvas { width: 36px; height: 36px; image-rendering: pixelated; }
+
+    .char-class-badge {
+      position: absolute;
+      bottom: -6px; right: -6px;
+      background: var(--dark);
+      border: 1px solid var(--amber);
+      width: 18px; height: 18px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 9px;
+    }
+
+    .char-info { flex: 1; }
+
+    .char-name {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 28px;
+      letter-spacing: 0.08em;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .char-class {
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 0.2em;
+      color: #444;
+      text-transform: uppercase;
+      margin-bottom: 2px;
+    }
+
+    .char-level {
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 0.15em;
+      color: var(--amber);
+    }
+
+    /* ═══ STAT BARS ═══ */
+    .stat-bars { display: flex; flex-direction: column; gap: 10px; margin-bottom: 18px; }
+
+    .stat-row { display: flex; align-items: center; gap: 12px; }
+
+    .stat-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 8px;
+      letter-spacing: 0.15em;
+      width: 28px;
+      flex-shrink: 0;
+      text-transform: uppercase;
+    }
+
+    .stat-bar-track {
+      flex: 1;
+      height: 4px;
+      background: var(--dark);
+      border: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat-bar-fill {
+      height: 100%;
+      width: 0%;
+      transition: width 0.6s ease-out;
+      position: relative;
+    }
+
+    .stat-bar-fill.hp   { background: var(--green); box-shadow: 0 0 6px rgba(74,222,128,0.5); }
+    .stat-bar-fill.mp   { background: var(--cyan);  box-shadow: 0 0 6px rgba(34,211,238,0.5); }
+    .stat-bar-fill.xp   { background: var(--amber); box-shadow: 0 0 6px var(--amber-glow); }
+    .stat-bar-fill.tip  { background: var(--cyan);  box-shadow: 0 0 6px rgba(34,211,238,0.5); }
+    .stat-bar-fill.mom  { background: var(--red);   box-shadow: 0 0 6px rgba(248,113,113,0.5); }
+
+    .stat-value {
+      font-family: 'Space Mono', monospace;
+      font-size: 8px;
+      letter-spacing: 0.05em;
+      color: var(--bone-dim);
+      width: 115px;
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    /* ═══ CONVICTION DISPLAY ═══ */
+    #conviction-display { margin-bottom: 12px; }
+
+    /* ═══ EQUIPMENT ═══ */
+    .equipment {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin: 0 0 6px;
+    }
+
+    .equip-slot {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      background: var(--dark);
+      border: 1px solid var(--border);
+      padding: 3px 10px;
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      color: #555;
+    }
+
+    /* ═══ LAST ACTION ═══ */
+    .last-action {
+      margin-top: 16px;
+      background: var(--dark);
+      border: 1px solid var(--border);
+      padding: 10px 14px;
+      height: 56px;
+      overflow: hidden;
+    }
+
+    .action-type {
+      font-family: 'Space Mono', monospace;
+      font-size: 8px;
+      letter-spacing: 0.2em;
+      color: #333;
+      margin-bottom: 5px;
+      text-transform: uppercase;
+    }
+
+    #last-action-text {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      color: #444;
+    }
+
+    /* ═══ SIMULATE PANEL ═══ */
+    .spell-book-container {
+      width: 100%;
+      max-width: 1120px;
+      margin-bottom: 20px;
+    }
+
+    .spell-book {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 20px 24px;
+    }
+
+    .spell-book-title {
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 0.25em;
+      color: var(--amber);
+      text-transform: uppercase;
+      margin-bottom: 14px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .spell-grid { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .spell-btn {
+      padding: 7px 16px;
+      background: var(--dark);
+      color: var(--bone-dim);
+      border: 1px solid var(--border);
+      cursor: pointer;
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 0.08em;
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      text-transform: uppercase;
+    }
+
+    .spell-btn:hover {
+      border-color: var(--amber);
+      color: var(--amber);
+      background: var(--amber-soft);
+    }
+
+    .spell-btn:active { transform: scale(0.97); }
+
+    .spell-btn.cast { border-color: #1a2a2a; color: var(--cyan); }
+    .spell-btn.cast:hover { border-color: var(--cyan); background: var(--cyan-glow); }
+
+    /* ═══ GLOBAL STATS ROW ═══ */
+    .party-stats {
+      display: flex;
+      justify-content: center;
+      gap: 0;
+      width: 100%;
+      max-width: 1120px;
+      margin-bottom: 20px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      overflow: hidden;
+    }
+
+    .party-stat {
+      flex: 1;
+      text-align: center;
+      padding: 18px 12px;
+      border-right: 1px solid var(--border);
+      position: relative;
+    }
+
+    .party-stat:last-child { border-right: none; }
+
+    .party-stat::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: var(--amber);
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+
+    .party-stat:hover::before { opacity: 0.5; }
+
+    .party-stat-value {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 28px;
+      letter-spacing: 0.06em;
+      color: var(--amber);
+      margin-bottom: 4px;
+      line-height: 1;
+    }
+
+    .party-stat-label {
+      font-family: 'Space Mono', monospace;
+      font-size: 8px;
+      letter-spacing: 0.2em;
+      color: #444;
+      text-transform: uppercase;
+    }
+
+    /* ═══ BATTLE LOG ═══ */
+    .battle-log-container {
+      width: 100%;
+      max-width: 1120px;
+      margin-bottom: 20px;
+    }
+
+    .battle-log {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 0;
+      height: 260px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .battle-log-title {
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 0.25em;
+      color: var(--amber);
+      text-transform: uppercase;
+      padding: 12px 20px 10px;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      background: var(--surface);
+      z-index: 10;
+      flex-shrink: 0;
+    }
+
+    #logEntries {
+      padding: 10px 20px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .log-entry {
+      display: flex;
+      gap: 14px;
+      line-height: 1.4;
+      align-items: baseline;
+    }
+
+    .log-time {
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      color: #333;
+      min-width: 68px;
+      flex-shrink: 0;
+    }
+
+    .log-agent {
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      font-weight: 700;
+      min-width: 62px;
+      flex-shrink: 0;
+    }
+
+    .log-action {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      flex: 1;
+    }
+
+    .success   { color: var(--green); }
+    .warning   { color: var(--amber); }
+    .danger    { color: var(--red); }
+    .info      { color: #444; }
+    .tip-event { color: var(--cyan); }
+
+    /* ═══ CONVICTION BADGES ═══ */
+    .conviction-badge {
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 0.06em;
+      padding: 2px 8px;
+      border: 1px solid;
+      display: inline-block;
+      margin-right: 8px;
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+
+    .c-low  { border-color: #333; color: #555; }
+    .c-med  { border-color: var(--cyan); color: var(--cyan); }
+    .c-high { border-color: var(--amber); color: var(--amber); box-shadow: 0 0 8px var(--amber-glow); }
+    .c-max  {
+      border-color: var(--red);
+      color: var(--red);
+      box-shadow: 0 0 14px rgba(248,113,113,0.6);
+      animation: pulse-max 0.8s ease-in-out 4;
+    }
+
+    @keyframes pulse-max {
+      0%,100% { box-shadow: 0 0 8px rgba(248,113,113,0.4); }
+      50%      { box-shadow: 0 0 24px rgba(248,113,113,0.9); }
+    }
+
+    /* ═══ CARD FLASH ═══ */
+    .flash-max  { animation: f-max  0.5s ease-in-out 5; }
+    .flash-high { animation: f-high 0.5s ease-in-out 3; }
+    .flash-med  { animation: f-med  0.5s ease-in-out 2; }
+    .flash-low  { animation: f-low  0.5s ease-in-out 1; }
+
+    @keyframes f-max  { 0%,100% { border-color:var(--border); } 50% { border-color:var(--red);  box-shadow: 0 0 30px rgba(248,113,113,0.5); } }
+    @keyframes f-high { 0%,100% { border-color:var(--border); } 50% { border-color:var(--amber); box-shadow: 0 0 24px var(--amber-glow); } }
+    @keyframes f-med  { 0%,100% { border-color:var(--border); } 50% { border-color:var(--cyan);  box-shadow: 0 0 18px var(--cyan-glow); } }
+    @keyframes f-low  { 0%,100% { border-color:var(--border); } 50% { border-color:#333; } }
+
+    /* ═══ RATIONALE ═══ */
+    .log-rationale {
+      font-family: 'DM Sans', sans-serif;
+      font-style: italic;
+      font-size: 11px;
+      color: #5b9aae;
+      margin-top: 3px;
+      margin-left: 144px;
+      padding-left: 10px;
+      border-left: 2px solid var(--cyan);
+      opacity: 0.85;
+    }
+
+    /* ═══ TIP HISTORY ═══ */
+    .quest-log-container {
+      width: 100%;
+      max-width: 1120px;
+      margin-bottom: 30px;
+    }
+
+    .quest-log {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 0;
+      max-height: 240px;
+      overflow-y: auto;
+    }
+
+    .quest-log-title {
+      font-family: 'Space Mono', monospace;
+      font-size: 9px;
+      letter-spacing: 0.25em;
+      color: var(--amber);
+      text-transform: uppercase;
+      padding: 12px 20px 10px;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      background: var(--surface);
+      z-index: 10;
+    }
+
+    #questEntries { padding: 0 20px 12px; }
+
+    .quest-row {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+    }
+
+    .quest-row:last-child { border-bottom: none; }
+
+    .quest-trigger {
+      color: var(--cyan);
+      border: 1px solid #1a2a2a;
+      padding: 2px 8px;
+      font-size: 8px;
+      letter-spacing: 0.08em;
+      white-space: nowrap;
+    }
+
+    .quest-amount { color: var(--green); min-width: 72px; }
+    .quest-time   { color: #333; min-width: 72px; }
+
+    .quest-hash {
+      color: #2a2a2a;
+      font-size: 9px;
+      cursor: pointer;
+      transition: color 0.15s;
+    }
+
+    .quest-hash:hover { color: var(--amber); }
+
+    .quest-empty {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      color: #333;
+      padding: 16px 0;
+      text-align: center;
+    }
+
+    /* ═══ FOOTER DECO ═══ */
+    .ground-deco {
+      font-family: 'Space Mono', monospace;
+      font-size: 10px;
+      color: #222;
+      letter-spacing: 0.3em;
+      margin-top: 30px;
+    }
+
+    /* flash util */
+    @keyframes value-flash { 0%,100% { color:var(--amber); } 50% { color:#fff; text-shadow: 0 0 14px var(--amber); } }
+    .flash { animation: value-flash 0.6s ease-in-out 3; }
+
+    /* scrollbar */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: var(--dark); }
+    ::-webkit-scrollbar-thumb { background: var(--border); }
+    ::-webkit-scrollbar-thumb:hover { background: var(--amber-dim); }
+  </style>
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header class="site-header">
+    <div class="header-eyebrow">SUPER-FAN AGENT // ARBITRUM ONE // WDK PROTOCOL</div>
+    <div class="main-title">ST<span>A</span>N</div>
+    <div class="title-sub">Conviction-Weighted Tipping · Aave Yield · Always On</div>
+    <div class="always-on-tagline">
+      <span>USDT earns yield 24/7.</span> Tips fire the moment creators earn it.<br>
+      Unlike browser tools — STAN runs server-side. Your capital never sleeps.
+    </div>
+  </header>
+
+  <!-- STATUS BAR -->
+  <div class="status-bar">
+    <div class="status-item">
+      <div class="status-dot" id="sseDot"></div>
+      <span style="letter-spacing:.1em">STAN</span>
+      <span class="status-val" id="stanStatusText">OFFLINE</span>
+    </div>
+    <div class="status-item">
+      <div class="status-dot" id="walletDot"></div>
+      <span style="letter-spacing:.1em">WALLET</span>
+      <span class="status-val" id="walletStatusText">—</span>
+    </div>
+    <div class="status-item">
+      <span style="letter-spacing:.1em">TIPS FIRED</span>
+      <span class="status-val" id="totalTipsCount">0</span>
+    </div>
+  </div>
+
+  <!-- VAULT TOTAL -->
+  <div class="vault-strip">
+    <div class="vault-label">Total Tipped</div>
+    <div class="vault-divider"></div>
+    <div class="vault-value" id="globalTotalTipped">$0.00</div>
+    <div class="vault-divider"></div>
+    <div class="vault-label">USDT</div>
+  </div>
+
+  <!-- PARTY GRID -->
+  <div class="party-grid" id="partyGrid">
+
+    <!-- STAN Card -->
+    <div class="char-card" id="card-stan">
+      <div class="char-header">
+        <div class="char-avatar">
+          <canvas id="avatar-stan" width="12" height="12"></canvas>
+          <div class="char-class-badge">⚡</div>
+        </div>
+        <div class="char-info">
+          <div class="char-name" style="color:var(--cyan)">STAN</div>
+          <div class="char-class">Class · Super-Fan Agent</div>
+          <div class="char-level">Network · Arbitrum One</div>
+        </div>
+      </div>
+
+      <div class="stat-bars">
+        <div class="stat-row">
+          <div class="stat-label" style="color:var(--green)">BAL</div>
+          <div class="stat-bar-track"><div class="stat-bar-fill hp" id="bar-usdt"></div></div>
+          <div class="stat-value" id="val-usdt">0.0000 USDT</div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-label" style="color:var(--cyan)">AAVE</div>
+          <div class="stat-bar-track"><div class="stat-bar-fill mp" id="bar-aave"></div></div>
+          <div class="stat-value" id="val-aave">0.0000 aUSDT</div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-label" style="color:var(--amber)">SRG</div>
+          <div class="stat-bar-track"><div class="stat-bar-fill xp" id="bar-surge"></div></div>
+          <div class="stat-value" id="val-surge">SURGE 1.0×</div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-label" style="color:var(--cyan)">SENT</div>
+          <div class="stat-bar-track"><div class="stat-bar-fill tip" id="bar-tipped"></div></div>
+          <div class="stat-value" id="val-tipped">$0.00 SENT</div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-label" style="color:var(--red)">MOM</div>
+          <div class="stat-bar-track"><div class="stat-bar-fill mom" id="bar-momentum"></div></div>
+          <div class="stat-value" id="val-momentum">0% — COLD</div>
+        </div>
+      </div>
+
+      <div id="conviction-display"></div>
+
+      <div class="equipment">
+        <div class="equip-slot">⚡ <span id="equip-wallet">0x????...????</span></div>
+        <div class="equip-slot">⚙ AAVE V3</div>
+        <div class="equip-slot">◈ WDK WALLET</div>
+      </div>
+
+      <div class="last-action" id="last-action-stan">
+        <div class="action-type">Last Action</div>
+        <div id="last-action-text">Waiting for stream events...</div>
+      </div>
+    </div>
+
+    <!-- CREATOR Card -->
+    <div class="char-card" id="card-creator">
+      <div class="char-header">
+        <div class="char-avatar">
+          <canvas id="avatar-creator" width="12" height="12"></canvas>
+          <div class="char-class-badge">🎙</div>
+        </div>
+        <div class="char-info">
+          <div class="char-name" style="color:var(--amber)">CREATOR</div>
+          <div class="char-class">Class · Rumble Streamer</div>
+          <div class="char-level">Receiving USDT Tips</div>
+        </div>
+      </div>
+
+      <div class="stat-bars">
+        <div class="stat-row">
+          <div class="stat-label" style="color:var(--green)">RECV</div>
+          <div class="stat-bar-track"><div class="stat-bar-fill hp" id="bar-creator-recv"></div></div>
+          <div class="stat-value" id="val-creator-recv">$0.00 RECEIVED</div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-label" style="color:var(--amber)">TIPS</div>
+          <div class="stat-bar-track"><div class="stat-bar-fill xp" id="bar-quests"></div></div>
+          <div class="stat-value" id="val-quests">0 TIPS FIRED</div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-label" style="color:var(--cyan)">DAY</div>
+          <div class="stat-bar-track"><div class="stat-bar-fill mp" id="bar-daily"></div></div>
+          <div class="stat-value" id="val-daily">$0.00 TODAY</div>
+        </div>
+      </div>
+
+      <div class="equipment">
+        <div class="equip-slot">📍 <span id="equip-creator" style="font-size:9px">Not configured</span></div>
+      </div>
+
+      <div style="margin-top:10px">
+        <div style="font-family:'Space Mono',monospace;font-size:8px;letter-spacing:.2em;color:#333;margin-bottom:8px;text-transform:uppercase">Active Triggers</div>
+        <div id="trigger-equip" class="equipment"></div>
+      </div>
+
+      <div class="last-action">
+        <div class="action-type">P&amp;L</div>
+        <div id="pl-display" style="font-family:'Space Mono',monospace;font-size:9px;color:#444">
+          Staked: $0.00 · Tipped: $0.00 · Net: $0.00
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- SIMULATE PANEL -->
+  <div class="spell-book-container">
+    <div class="spell-book">
+      <div class="spell-book-title">// Simulate Stream Events</div>
+      <div class="spell-grid">
+        <button class="spell-btn cast" onclick="castSpell('viewer_milestone',{viewers:1000})">👁 1000 Viewers</button>
+        <button class="spell-btn cast" onclick="castSpell('sentiment_spike',{score:8.4,messages:['LFG!!','lets go!!!','WAGMI','🔥🔥🔥']})">◈ Sentiment 8.4</button>
+        <button class="spell-btn cast" onclick="castSpell('match_rant',{username:'SuperFan',amountCents:5000})">$ $50 Rant Match</button>
+        <button class="spell-btn cast" onclick="castSpell('new_subscriber',{username:'RoninFan',amountDollars:10})">⭐ New Subscriber</button>
+        <button class="spell-btn cast" onclick="castSpell('gifted_sub_wave',{count:10})">↑ 10 Gifted Subs</button>
+        <button class="spell-btn" onclick="castSpell('go_live')">▶ Go Live</button>
+        <button class="spell-btn" onclick="castSpell('go_offline')">■ Go Offline</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- GLOBAL STATS -->
+  <div class="party-stats">
+    <div class="party-stat">
+      <div class="party-stat-value" id="stat-total-tipped">$0.00</div>
+      <div class="party-stat-label">Total Tipped</div>
+    </div>
+    <div class="party-stat">
+      <div class="party-stat-value" id="stat-tips-count">0</div>
+      <div class="party-stat-label">Tips Fired</div>
+    </div>
+    <div class="party-stat">
+      <div class="party-stat-value" id="stat-surge">1.0×</div>
+      <div class="party-stat-label">Tip Surge</div>
+    </div>
+    <div class="party-stat">
+      <div class="party-stat-value" id="stat-staked">$0.00</div>
+      <div class="party-stat-label">Staked</div>
+    </div>
+  </div>
+
+  <!-- BATTLE LOG -->
+  <div class="battle-log-container">
+    <div class="battle-log" id="battleLog">
+      <div class="battle-log-title">// Activity Feed — STAN Brain Output</div>
+      <div id="logEntries">
+        <div class="log-entry">
+          <span class="log-time">00:00:00</span>
+          <span class="log-agent tip-event">STAN</span>
+          <span class="log-action info">Agent initializing... awaiting stream events.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TIP HISTORY -->
+  <div class="quest-log-container">
+    <div class="quest-log">
+      <div class="quest-log-title">// Tip History</div>
+      <div id="questEntries">
+        <div class="quest-empty">No tips fired yet. STAN is watching...</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ground-deco">· · · ⚡ STAN PROTOCOL ⚡ · · ·</div>
+
+<script>
+  // ═══════════════════════════════════════════
+  // PIXEL AVATAR RENDERER
+  // ═══════════════════════════════════════════
+  const AVATARS = {
+    stan: {
+      pixels: [
+        '....CCCC....',
+        '...CCCCC...',
+        '..CFFCCC...',
+        '..FCCFCF...',
+        '..FFFFFF...',
+        '...CCCC....',
+        '..CCGCC....',
+        '.CCCCCCC...',
+        '....C.C....',
+        '....C.C....',
+        '....F.F....',
+        '....F.F....',
+      ],
+      colors: { 'C': '#22d3ee', 'F': '#F0EDE8', 'G': '#E8820C' }
+    },
+    creator: {
+      pixels: [
+        '....YYYY....',
+        '...YYYYY...',
+        '..YFFYYY...',
+        '..FYYFYF...',
+        '..FFFFFF...',
+        '...YYYY....',
+        '..YYYYM....',
+        '.YYYYYYY...',
+        '....Y.Y....',
+        '....Y.Y....',
+        '....F.F....',
+        '....F.F....',
+      ],
+      colors: { 'Y': '#E8820C', 'F': '#F0EDE8', 'M': '#ffffff' }
+    }
+  }
+
+  function drawAvatar(canvasId, type) {
+    const canvas = document.getElementById(canvasId)
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    const data = AVATARS[type]
+    if (!data) return
+    canvas.width = 12; canvas.height = 12
+    ctx.clearRect(0, 0, 12, 12)
+    data.pixels.forEach((row, y) => {
+      for (let x = 0; x < row.length; x++) {
+        const c = row[x]
+        if (c !== '.' && data.colors[c]) {
+          ctx.fillStyle = data.colors[c]
+          ctx.fillRect(x, y, 1, 1)
+        }
+      }
+    })
+  }
+
+  drawAvatar('avatar-stan', 'stan')
+  drawAvatar('avatar-creator', 'creator')
+
+  // ═══════════════════════════════════════════
+  // STATE
+  // ═══════════════════════════════════════════
+  let state = {
+    totalTipped: 0,
+    totalStaked: 0,
+    tipsCount: 0,
+    dailySpent: 0,
+    surgeMultiplier: 1.0,
+    walletAddress: null,
+    creatorAddress: null,
+    maxDailySpend: 50,
+  }
+
+  // ═══════════════════════════════════════════
+  // BATTLE LOG
+  // ═══════════════════════════════════════════
+  function addLog(agent, cls, message, actionCls) {
+    const container = document.getElementById('logEntries')
+    if (!container) return
+    const now = new Date()
+    const time = now.toLocaleTimeString('en-US', { hour12: false })
+    const entry = document.createElement('div')
+    entry.className = 'log-entry'
+    entry.innerHTML = `
+      <span class="log-time">${time}</span>
+      <span class="log-agent ${cls}">${agent}</span>
+      <span class="log-action ${actionCls || ''}">${escHtml(message)}</span>
+    `
+    container.appendChild(entry)
+    while (container.children.length > 100) container.removeChild(container.firstChild)
+    const log = document.getElementById('battleLog')
+    if (log) log.scrollTop = log.scrollHeight
+  }
+
+  function addConvictionLog(conviction, multiplier, amount, momentum, reason, rationale) {
+    const container = document.getElementById('logEntries')
+    if (!container) return
+    const now = new Date()
+    const time = now.toLocaleTimeString('en-US', { hour12: false })
+    const classMap = { LOW: 'c-low', MEDIUM: 'c-med', HIGH: 'c-high', MAX: 'c-max' }
+    const badgeCls = classMap[conviction] ?? 'c-med'
+    const emojiMap = { LOW: '▼', MEDIUM: '■', HIGH: '▲', MAX: '⚡' }
+    const emoji = emojiMap[conviction] ?? '⚡'
+    const entry = document.createElement('div')
+    entry.style.cssText = 'display:flex;flex-direction:column;gap:4px;padding:8px 0;border-bottom:1px solid #181818'
+    entry.innerHTML = `
+      <div class="log-entry">
+        <span class="log-time">${time}</span>
+        <span class="log-agent success">BRAIN</span>
+        <span class="log-action">
+          <span class="conviction-badge ${badgeCls}">${emoji} ${conviction} ${multiplier}×</span>
+          <span style="color:var(--green)">TIP $${amount.toFixed(2)}</span>
+          <span style="color:#333;font-size:9px;margin-left:8px;font-family:'Space Mono',monospace">momentum: ${Math.round(momentum * 100)}%</span>
+        </span>
+      </div>
+      ${rationale ? `<div class="log-rationale">"${escHtml(rationale)}"</div>` : ''}
+      <div style="margin-left:144px;font-family:'Space Mono',monospace;font-size:9px;color:#333;line-height:1.4">${escHtml(reason.split('[')[0].trim())}</div>
+    `
+    container.appendChild(entry)
+    while (container.children.length > 80) container.removeChild(container.firstChild)
+    const log = document.getElementById('battleLog')
+    if (log) log.scrollTop = log.scrollHeight
+  }
+
+  function flashCard(cardId, conviction) {
+    const card = document.getElementById(cardId)
+    if (!card) return
+    const clsMap = { MAX: 'flash-max', HIGH: 'flash-high', MEDIUM: 'flash-med', LOW: 'flash-low' }
+    const cls = clsMap[conviction] ?? 'flash-med'
+    card.classList.add(cls)
+    setTimeout(() => card.classList.remove(cls), 3000)
+  }
+
+  function updateMomentum(score, conviction) {
+    const pct = Math.round(score * 100)
+    const bar = document.getElementById('bar-momentum')
+    const val = document.getElementById('val-momentum')
+    const conv = document.getElementById('conviction-display')
+    if (bar) bar.style.width = pct + '%'
+    const colorMap = { LOW: '#333', MEDIUM: 'var(--cyan)', HIGH: 'var(--amber)', MAX: 'var(--red)' }
+    if (bar) bar.style.background = colorMap[conviction] ?? 'var(--cyan)'
+    if (val) val.textContent = `${pct}% — ${conviction}`
+    if (conv) {
+      const classMap = { LOW: 'c-low', MEDIUM: 'c-med', HIGH: 'c-high', MAX: 'c-max' }
+      conv.innerHTML = `<span class="conviction-badge ${classMap[conviction] ?? 'c-med'}">${conviction} CONVICTION</span>`
+    }
+  }
+
+  // ═══════════════════════════════════════════
+  // SSE
+  // ═══════════════════════════════════════════
+  function connectSSE() {
+    const sseDot = document.getElementById('sseDot')
+    const stanStatusText = document.getElementById('stanStatusText')
+    const es = new EventSource('/stan/events')
+
+    es.onopen = () => {
+      sseDot.classList.add('online')
+      stanStatusText.textContent = 'ACTIVE'
+    }
+    es.onerror = () => {
+      sseDot.classList.remove('online')
+      stanStatusText.textContent = 'RECONNECTING'
+      setTimeout(connectSSE, 3000)
+    }
+    es.onmessage = (e) => {
+      const data = JSON.parse(e.data)
+      handleEvent(data)
+    }
+  }
+
+  function handleEvent(data) {
+    switch (data.event) {
+      case 'CONNECTED':
+        addLog('STAN', 'tip-event', 'Agent connected. Watching stream.', 'info')
+        loadConfig()
+        loadTips()
+        updateSurge()
+        break
+
+      case 'WALLET_READY':
+        state.walletAddress = data.address
+        updateWalletUI(data.address)
+        addLog('WALLET', 'success', `Ready: ${shortAddr(data.address)}`, 'success')
+        break
+
+      case 'BALANCE_UPDATE':
+        updateBalanceBars(parseFloat(data.usdt), parseFloat(data.aavePosition))
+        break
+
+      case 'AAVE_SUPPLIED':
+        state.totalStaked += data.amount
+        addLog('AAVE', 'warning', `Supplied $${data.amount} USDT to Aave. tx: ${shortHash(data.txHash)}`, 'warning')
+        updateStatBars()
+        break
+
+      case 'STREAM_EVENT': {
+        const ev = data.streamEvent
+        const label = ev.type.toUpperCase().replace(/_/g, ' ')
+        addLog('RUMBLE', 'tip-event', `[${label}] ${JSON.stringify(ev.data)}`, 'tip-event')
+        break
+      }
+
+      case 'BRAIN_DECISION': {
+        const dec = data.decision
+        if (dec.action === 'tip') {
+          const { conviction, convictionMultiplier, amount, momentumScore, reason } = dec.intent
+          addConvictionLog(conviction, convictionMultiplier, amount, momentumScore, reason, data.rationale ?? null)
+          setLastAction(`TIP $${amount.toFixed(2)} — ${conviction} CONVICTION ${convictionMultiplier}×`)
+          flashCard('card-stan', conviction)
+          updateMomentum(momentumScore, conviction)
+        } else {
+          addLog('BRAIN', '', `→ HOLD | ${dec.reason}`, 'info')
+        }
+        break
+      }
+
+      case 'WITHDRAWING':
+        addLog('AAVE', 'warning', `Withdrawing $${data.amount} USDT: ${data.reason}`, 'warning')
+        break
+
+      case 'TIP_SENT':
+        state.totalTipped += data.amount
+        state.tipsCount++
+        addLog('STAN', 'tip-event', `✓ SENT $${data.amount} USDT → ${shortAddr(data.creator)} | tx: ${shortHash(data.txHash)}`, 'tip-event')
+        setLastAction(`TIPPED $${data.amount} → ${shortAddr(data.creator)}`)
+        document.getElementById('globalTotalTipped').textContent = `$${state.totalTipped.toFixed(2)}`
+        document.getElementById('globalTotalTipped').classList.add('flash')
+        setTimeout(() => document.getElementById('globalTotalTipped').classList.remove('flash'), 2000)
+        updateStatBars()
+        loadTips()
+        updateSurge()
+        break
+
+      case 'ERROR':
+        addLog('ERROR', 'danger', data.message, 'danger')
+        break
+    }
+  }
+
+  // ═══════════════════════════════════════════
+  // UI UPDATES
+  // ═══════════════════════════════════════════
+  function updateWalletUI(address) {
+    document.getElementById('equip-wallet').textContent = shortAddr(address)
+    document.getElementById('walletStatusText').textContent = shortAddr(address)
+    document.getElementById('walletDot').classList.add('online')
+  }
+
+  function updateBalanceBars(usdt, aave) {
+    const total = state.totalStaked || Math.max(usdt + aave, 1)
+    const usdtPct = Math.min(100, (usdt / total) * 100)
+    const aavePct = Math.min(100, (aave / total) * 100)
+    document.getElementById('bar-usdt').style.width  = usdtPct + '%'
+    document.getElementById('bar-aave').style.width  = aavePct + '%'
+    document.getElementById('val-usdt').textContent  = usdt.toFixed(4) + ' USDT'
+    document.getElementById('val-aave').textContent  = aave.toFixed(4) + ' aUSDT'
+  }
+
+  function updateStatBars() {
+    const staked = state.totalStaked || 1
+    const tippedPct = Math.min(100, (state.totalTipped / staked) * 100)
+    document.getElementById('bar-tipped').style.width    = tippedPct + '%'
+    document.getElementById('val-tipped').textContent    = `$${state.totalTipped.toFixed(2)} SENT`
+    document.getElementById('val-creator-recv').textContent = `$${state.totalTipped.toFixed(2)} RECV`
+    document.getElementById('bar-creator-recv').style.width = tippedPct + '%'
+    document.getElementById('val-quests').textContent    = `${state.tipsCount} TIPS FIRED`
+    document.getElementById('bar-quests').style.width    = Math.min(100, (state.tipsCount / 10) * 100) + '%'
+    document.getElementById('val-daily').textContent     = `$${state.dailySpent.toFixed(2)} TODAY`
+    document.getElementById('bar-daily').style.width     = Math.min(100, (state.dailySpent / state.maxDailySpend) * 100) + '%'
+
+    document.getElementById('stat-total-tipped').textContent = `$${state.totalTipped.toFixed(2)}`
+    document.getElementById('stat-tips-count').textContent   = state.tipsCount
+    document.getElementById('stat-staked').textContent       = `$${state.totalStaked.toFixed(2)}`
+    document.getElementById('totalTipsCount').textContent    = state.tipsCount
+
+    const net = state.totalTipped
+    document.getElementById('pl-display').textContent =
+      `Staked: $${state.totalStaked.toFixed(2)} · Tipped: $${net.toFixed(2)} · Remaining: $${Math.max(0, state.totalStaked - net).toFixed(2)}`
+  }
+
+  function updateSurge() {
+    fetch('/stan/lending')
+      .then(r => r.json())
+      .then(d => {
+        const mult = d.surge_multiplier ?? 1
+        const mins = d.minutes_since_last_tip === 999 || d.minutes_since_last_tip == null ? 0 : d.minutes_since_last_tip
+        state.surgeMultiplier = mult
+        const surgePct = Math.min(100, (mins / 60) * 100)
+        document.getElementById('bar-surge').style.width = surgePct + '%'
+        document.getElementById('val-surge').textContent = `SURGE ${mult.toFixed(1)}×`
+        document.getElementById('stat-surge').textContent = `${mult.toFixed(1)}×`
+        if (d.aave_position_usdt) {
+          const usdt = parseFloat(document.getElementById('val-usdt').textContent) || 0
+          updateBalanceBars(usdt, parseFloat(d.aave_position_usdt))
+        }
+      }).catch(() => {})
+  }
+
+  function setLastAction(text) {
+    const el = document.getElementById('last-action-text')
+    el.textContent = text
+    el.style.color = 'var(--cyan)'
+    setTimeout(() => { el.style.color = '#444' }, 3000)
+  }
+
+  // ═══════════════════════════════════════════
+  // CONFIG + TIPS
+  // ═══════════════════════════════════════════
+  function loadConfig() {
+    fetch('/stan/config').then(r => r.json()).then(d => {
+      state.totalStaked = d.stake_amount ?? 0
+      state.maxDailySpend = d.max_daily_spend ?? 50
+      if (d.creator_address) {
+        state.creatorAddress = d.creator_address
+        document.getElementById('equip-creator').textContent = shortAddr(d.creator_address)
+      }
+      const triggers = (d.triggers ?? []).filter(t => t.enabled)
+      const triggerContainer = document.getElementById('trigger-equip')
+      triggerContainer.innerHTML = triggers.map(t =>
+        `<div class="equip-slot" style="font-size:9px;border-color:#1a2a1a">
+          ⚡ ${t.type.replace(/_/g,' ')} <span style="color:var(--green);margin-left:4px">$${t.tipAmount}</span>
+        </div>`
+      ).join('')
+      document.getElementById('stat-staked').textContent = `$${state.totalStaked.toFixed(2)}`
+      updateStatBars()
+    }).catch(() => {})
+
+    fetch('/stan/wallet').then(r => r.json()).then(d => {
+      if (d.address) updateWalletUI(d.address)
+      if (d.usdt_balance) {
+        const usdt = parseFloat(d.usdt_balance)
+        updateBalanceBars(usdt, 0)
+      }
+    }).catch(() => {})
+  }
+
+  function loadTips() {
+    fetch('/stan/tips').then(r => r.json()).then(d => {
+      state.totalTipped = d.total_tipped ?? 0
+      state.tipsCount = d.tips?.length ?? 0
+      document.getElementById('globalTotalTipped').textContent = `$${state.totalTipped.toFixed(2)}`
+      updateStatBars()
+      const container = document.getElementById('questEntries')
+      if (!d.tips?.length) {
+        container.innerHTML = '<div class="quest-empty">No tips fired yet. STAN is watching...</div>'
+        return
+      }
+      container.innerHTML = d.tips.slice(0, 25).map(t => `
+        <div class="quest-row">
+          <span class="quest-trigger">${t.triggerType.replace(/_/g,' ')}</span>
+          <span class="quest-amount">+$${t.amount.toFixed(2)}</span>
+          <span class="quest-time">${new Date(t.timestamp).toLocaleTimeString()}</span>
+          <span class="quest-hash" title="${t.txHash}" onclick="window.open('https://arbiscan.io/tx/${t.txHash}')">${shortHash(t.txHash)}</span>
+        </div>`).join('')
+    }).catch(() => {})
+  }
+
+  // ═══════════════════════════════════════════
+  // SPELL CASTING
+  // ═══════════════════════════════════════════
+  function castSpell(type, data = {}) {
+    addLog('SIM', 'warning', `Simulating: ${type.toUpperCase().replace(/_/g,' ')}`, 'warning')
+    fetch('/stan/simulate-milestone', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type, data }),
+    }).catch(() => {})
+  }
+
+  // ═══════════════════════════════════════════
+  // UTILS
+  // ═══════════════════════════════════════════
+  function shortAddr(addr) {
+    if (!addr || addr.length < 12) return addr ?? '—'
+    return addr.slice(0, 6) + '...' + addr.slice(-4)
+  }
+  function shortHash(hash) {
+    if (!hash || hash.length < 12) return hash ?? '—'
+    return hash.slice(0, 8) + '...'
+  }
+  function escHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+  }
+
+  setInterval(updateSurge, 30_000)
+  connectSSE()
+</script>
+</body>
+</html>

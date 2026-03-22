@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.env
+.env.local
+*.tgz
+wdk-temp/
+wdk-temp2/
+packages/*/node_modules/

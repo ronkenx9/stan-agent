@@ -1,0 +1,22 @@
+{
+  "name": "@stan/core",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/index.ts"
+  },
+  "dependencies": {
+    "@tetherto/wdk-wallet-evm": "1.0.0-beta.10",
+    "@tetherto/wdk-protocol-lending-aave-evm": "1.0.0-beta.3",
+    "dotenv": "^16.6.1",
+    "ethers": "^6.14.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.3.3"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "name": "stan",
+  "version": "1.0.0",
+  "private": true,
+  "description": "STAN — AI Super-Fan Tipping Agent. WDK Agent Wallets + Autonomous DeFi Agent.",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "pnpm --filter ./packages/* build",
+    "dev:api": "pnpm --filter @stan/api dev",
+    "dev:core": "pnpm --filter @stan/core dev",
+    "demo": "tsx --env-file=.env scripts/demo.ts",
+    "start": "pnpm --filter @stan/api start"
+  },
+  "devDependencies": {
+    "tsx": "^4.21.0",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "pnpm": ">=8.0.0"
+  }
+}
