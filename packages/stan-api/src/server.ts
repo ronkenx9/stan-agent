@@ -67,7 +67,7 @@ async function handleStreamEvent(streamEvent: StreamEvent): Promise<void> {
   if (decision.action !== 'tip' || !decision.intent) return
 
   const { amount, reason, triggerType } = decision.intent
-  const creator = stanConfig.creatorAddress
+  const creator = stanConfig.creatorAddress?.toLowerCase() as `0x${string}`
 
   if (!creator) {
     broadcast({ event: 'ERROR', message: 'Creator address not configured.', timestamp: Date.now() })

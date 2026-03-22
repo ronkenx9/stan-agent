@@ -93,6 +93,7 @@ export async function initSmartAccount(): Promise<{ address: string }> {
     account: safeAccount,
     chain: arbitrum,
     bundlerTransport: http(bundlerUrl),
+    paymaster: pimlicoClient,   // Pimlico sponsors gas — Safe needs no ETH
     userOperation: {
       estimateFeesPerGas: async () => (await pimlicoClient.getUserOperationGasPrice()).fast,
     },

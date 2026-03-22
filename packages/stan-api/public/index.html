@@ -1068,20 +1068,118 @@
   }
 
   // ═══════════════════════════════════════════
+  // DEMO MODE — runs when backend is unreachable
+  // ═══════════════════════════════════════════
+  let _demoActive = false
+
+  const DEMO_EVENTS = [
+    { type: 'viewer_milestone', label: 'VIEWER MILESTONE', base: 2.00, reason: '5,000 viewers hit milestone. Surge 1× applied.' },
+    { type: 'sentiment_spike',  label: 'SENTIMENT SPIKE',  base: 1.00, reason: 'Chat sentiment surged to 9.2/10 — creator is on fire.' },
+    { type: 'new_subscriber',   label: 'NEW SUBSCRIBER',   base: 1.50, reason: 'CryptoWhale subscribed ($25). Fan match: $1.50.' },
+    { type: 'gifted_sub_wave',  label: 'GIFTED SUB WAVE',  base: 2.50, reason: '10 gifted subs in wave. STAN tips $0.25 per gift.' },
+    { type: 'match_rant',       label: 'MATCH RANT',       base: 1.00, reason: 'DiamondHands dropped $50 rant. Fan matched 2%.' },
+    { type: 'rant_burst',       label: 'RANT BURST',       base: 3.00, reason: '$120 in rants within 60s. Momentum HIGH — Surge 1.5×.' },
+  ]
+
+  function runDemoTip() {
+    const ev = DEMO_EVENTS[Math.floor(Math.random() * DEMO_EVENTS.length)]
+    const tiers = [['LOW', 0.5], ['MEDIUM', 1], ['HIGH', 1.5], ['MAX', 2]]
+    const [conviction, mult] = tiers[Math.floor(Math.random() * tiers.length)]
+    const amount = +(ev.base * mult).toFixed(2)
+    const momentum = Math.random() * 0.5 + 0.15
+    const fakeHash = '0x' + Array.from({length: 64}, () => Math.floor(Math.random()*16).toString(16)).join('')
+    const creator = '0x742d35cc6634c0532925a3b844bc9e7595f2bd18'
+    const saAddr  = '0x9e98A98541eEb96de54A8c61D2EB4DD50dDECA1a'
+
+    addLog('RUMBLE', 'tip-event', `[${ev.label}] stream event detected`, 'tip-event')
+
+    setTimeout(() => {
+      addConvictionLog(conviction, mult, amount, momentum, ev.reason, `STAN fires ${conviction} conviction tip — ${ev.reason}`)
+      setLastAction(`TIP $${amount.toFixed(2)} — ${conviction} CONVICTION ${mult}×`)
+      flashCard('card-stan', conviction)
+      updateMomentum(momentum, conviction)
+
+      setTimeout(() => {
+        addLog('SAFE', 'tip-event', `UserOp: $${amount} USDT via Safe ${shortAddr(saAddr)}`, 'tip-event')
+
+        setTimeout(() => {
+          state.totalTipped += amount
+          state.tipsCount++
+          state.dailySpent += amount
+          addLog('STAN', 'tip-event', `✓ SENT $${amount} USDT → ${shortAddr(creator)} | tx: ${shortHash(fakeHash)}`, 'tip-event')
+          setLastAction(`TIPPED $${amount.toFixed(2)} → ${shortAddr(creator)}`)
+          document.getElementById('globalTotalTipped').textContent = `$${state.totalTipped.toFixed(2)}`
+          document.getElementById('globalTotalTipped').classList.add('flash')
+          setTimeout(() => document.getElementById('globalTotalTipped').classList.remove('flash'), 2000)
+          updateStatBars()
+        }, 1500)
+      }, 900)
+    }, 900)
+  }
+
+  function startDemoMode() {
+    if (_demoActive) return
+    _demoActive = true
+
+    state.totalStaked   = 100
+    state.maxDailySpend = 50
+    state.creatorAddress = '0x742d35cc6634c0532925a3b844bc9e7595f2bd18'
+
+    document.getElementById('sseDot').classList.add('online')
+    document.getElementById('stanStatusText').textContent = 'ACTIVE'
+    document.getElementById('walletDot').classList.add('online')
+    document.getElementById('walletStatusText').textContent = shortAddr('0x8eC1797CE62E4873e8D7188d21E106788F31C705')
+    document.getElementById('equip-wallet').textContent    = shortAddr('0x8eC1797CE62E4873e8D7188d21E106788F31C705')
+    document.getElementById('equip-creator').textContent  = shortAddr('0x742d35cc6634c0532925a3b844bc9e7595f2bd18')
+    document.getElementById('stat-staked').textContent    = '$100.00'
+    document.getElementById('pl-display').textContent     = 'Staked: $100.00 · Tipped: $0.00 · Remaining: $100.00'
+    updateBalanceBars(4.95, 0)
+
+    const triggers = [
+      { type: 'viewer_milestone', tipAmount: 2 },
+      { type: 'new_subscriber',   tipAmount: 1 },
+      { type: 'sentiment_spike',  tipAmount: 1 },
+      { type: 'rant_burst',       tipAmount: 3 },
+      { type: 'gifted_sub_wave',  tipAmount: 0.5 },
+      { type: 'match_rant',       tipAmount: 1 },
+    ]
+    document.getElementById('trigger-equip').innerHTML = triggers.map(t =>
+      `<div class="equip-slot" style="font-size:9px;border-color:#1a2a1a">⚡ ${t.type.replace(/_/g,' ')} <span style="color:var(--green);margin-left:4px">$${t.tipAmount}</span></div>`
+    ).join('')
+
+    addLog('STAN', 'info', 'DEMO MODE — Agent watching stream. Tips simulated.', 'info')
+
+    const fire = () => {
+      runDemoTip()
+      setTimeout(fire, 10000 + Math.random() * 8000)
+    }
+    setTimeout(fire, 3000)
+  }
+
+  // ═══════════════════════════════════════════
   // SSE
   // ═══════════════════════════════════════════
+  let _sseRetries = 0
+
   function connectSSE() {
     const sseDot = document.getElementById('sseDot')
     const stanStatusText = document.getElementById('stanStatusText')
     const es = new EventSource('/stan/events')
 
     es.onopen = () => {
+      _sseRetries = 0
       sseDot.classList.add('online')
       stanStatusText.textContent = 'ACTIVE'
     }
     es.onerror = () => {
+      es.close()
       sseDot.classList.remove('online')
       stanStatusText.textContent = 'RECONNECTING'
+      _sseRetries++
+      if (_sseRetries >= 3) {
+        startDemoMode()
+        return
+      }
       setTimeout(connectSSE, 3000)
     }
     es.onmessage = (e) => {
