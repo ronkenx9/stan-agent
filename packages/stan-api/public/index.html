@@ -1136,6 +1136,10 @@
         break
       }
 
+      case 'SMART_ACCOUNT_TIP':
+        addLog('SAFE', 'tip-event', `UserOp: $${data.amount} USDT via Safe ${shortAddr(data.saAddress)}`, 'tip-event')
+        break
+
       case 'WITHDRAWING':
         addLog('AAVE', 'warning', `Withdrawing $${data.amount} USDT: ${data.reason}`, 'warning')
         break
@@ -1248,9 +1252,9 @@
     }).catch(() => {})
 
     fetch('/stan/wallet').then(r => r.json()).then(d => {
-      if (d.address) updateWalletUI(d.address)
-      if (d.usdt_balance) {
-        const usdt = parseFloat(d.usdt_balance)
+      if (d.eoa_address) updateWalletUI(d.eoa_address)
+      if (d.usdt_balance_eoa) {
+        const usdt = parseFloat(d.usdt_balance_eoa)
         updateBalanceBars(usdt, 0)
       }
     }).catch(() => {})

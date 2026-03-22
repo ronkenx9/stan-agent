@@ -264,7 +264,8 @@ export function evaluate(event: StreamEvent, config: StanConfig): BrainDecision 
   if (event.data.watching_now) {
     recordViewerSample(event.data.watching_now)
   }
-  if (event.data.rant) {
+  // Record rant for engagement factor (skip if rant_burst already pushed above)
+  if (event.data.rant && event.type !== 'rant_burst') {
     rantWindow.push({ amountCents: event.data.rant.amount_cents, timestamp: Date.now() })
   }
 

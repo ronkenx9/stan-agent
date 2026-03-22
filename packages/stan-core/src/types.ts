@@ -80,6 +80,7 @@ export type StanEvent =
   | { event: 'BRAIN_DECISION';  decision: BrainDecision; rationale: string | null; timestamp: number }
   | { event: 'WITHDRAWING';     amount: number; reason: string; timestamp: number }
   | { event: 'TIP_SENT';        creator: string; amount: number; txHash: string; timestamp: number }
+  | { event: 'SMART_ACCOUNT_TIP'; saAddress: string; amount: number; timestamp: number }
   | { event: 'ERROR';           message: string; timestamp: number }
   | { event: 'CONNECTED';       timestamp: number }
 
