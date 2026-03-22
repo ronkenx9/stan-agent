@@ -8,12 +8,17 @@ import {
   getUsdtBalanceFormatted,
   getAaveBalanceFormatted,
   sendUsdt,
+  fundSmartAccount,
   supplyToAave,
   withdrawFromAave,
   evaluate,
   recordTip,
   getSurgeMultiplier,
   getMinutesSinceLastTip,
+  initSmartAccount,
+  isSmartAccountReady,
+  getSmartAccountAddress,
+  sendUsdtFromSmartAccount,
   type StanEvent,
   type StreamEvent,
 } from '@stan/core'
@@ -80,7 +85,18 @@ async function handleStreamEvent(streamEvent: StreamEvent): Promise<void> {
       }
     }
 
-    const txHash = await sendUsdt(creator, amount)
+    let txHash: string
+
+    if (isSmartAccountReady()) {
+      // Smart account path — fund Safe from WDK EOA, then send tip as UserOp
+      const saAddress = getSmartAccountAddress()!
+      broadcast({ event: 'SMART_ACCOUNT_TIP', saAddress, amount, timestamp: Date.now() })
+      await fundSmartAccount(saAddress, amount)     // WDK EOA → Safe
+      txHash = await sendUsdtFromSmartAccount(creator, amount)  // Safe → creator (UserOp)
+    } else {
+      // Fallback — direct EOA send via WDK
+      txHash = await sendUsdt(creator, amount)
+    }
 
     recordTip(triggerType, amount)
     addTip({ timestamp: Date.now(), creator, amount, txHash, triggerType, reason })
@@ -121,6 +137,8 @@ app.get('/stan/health', (_req, res) => {
   res.json({
     status: 'ok',
     wallet: agentState.walletAddress,
+    smart_account: getSmartAccountAddress(),
+    smart_account_active: isSmartAccountReady(),
     running: agentState.isRunning,
     timestamp: Date.now(),
     sseClients: sseClients.size,
@@ -132,9 +150,12 @@ app.get('/stan/wallet', async (_req, res) => {
   try {
     const usdt = await getUsdtBalanceFormatted()
     res.json({
-      address: agentState.walletAddress,
-      usdt_balance: usdt,
+      eoa_address: agentState.walletAddress,
+      smart_account_address: getSmartAccountAddress(),
+      smart_account_active: isSmartAccountReady(),
+      usdt_balance_eoa: usdt,
       network: 'Arbitrum One',
+      account_type: isSmartAccountReady() ? 'Safe ERC-4337 (EntryPoint v0.7)' : 'EOA (WDK)',
     })
   } catch (err) {
     res.status(500).json({ error: String(err) })
@@ -273,17 +294,30 @@ app.get('/stan/events', (req: Request, res: Response) => {
 // ─── Startup ──────────────────────────────────────────────────────────────────
 
 async function start(): Promise<void> {
-  // Initialize wallet on startup (non-fatal if seed missing — demo mode)
+  // Initialize WDK wallet (EOA — Aave lending, signing)
   if (process.env.WDK_SEED) {
     try {
       const { address } = await initWallet()
       agentState.walletAddress = address
       agentState.isRunning = true
-      console.log(`[STAN] Wallet ready: ${address}`)
+      console.log(`[STAN] WDK EOA ready:           ${address}`)
       await refreshBalances()
     } catch (err) {
       console.error('[STAN] Wallet init failed:', err)
       console.log('[STAN] Running in demo mode (no wallet)')
+    }
+
+    // Initialize Safe smart account (ERC-4337 — tip execution via UserOps)
+    if (process.env.PIMLICO_API_KEY) {
+      try {
+        const { address: saAddress } = await initSmartAccount()
+        console.log(`[STAN] Safe smart account ready: ${saAddress}`)
+        console.log(`[STAN] Tips will execute as ERC-4337 UserOperations via Pimlico`)
+      } catch (err) {
+        console.error('[STAN] Smart account init failed (tips will fall back to EOA):', err)
+      }
+    } else {
+      console.log('[STAN] No PIMLICO_API_KEY — tips will execute via WDK EOA (set PIMLICO_API_KEY to enable smart account)')
     }
   } else {
     console.log('[STAN] No WDK_SEED set — running in demo mode')

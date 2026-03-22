@@ -1249,54 +1249,57 @@
         <div class="tech-desc">@stan/core + @stan/api · clean separation of brain and server</div>
       </div>
       <div class="tech-item">
-        <div class="tech-label">Safety</div>
-        <div class="tech-name">Off-Chain Caveat Enforcer</div>
-        <div class="tech-desc">5-gate Brain validation before every tx · same principle as ERC-7710 delegation caveats</div>
+        <div class="tech-label">Smart Account</div>
+        <div class="tech-name">Safe ERC-4337</div>
+        <div class="tech-desc">Safe 1.4.1 · EntryPoint v0.7 · tips execute as UserOperations via Pimlico bundler</div>
+      </div>
+      <div class="tech-item">
+        <div class="tech-label">Bundler</div>
+        <div class="tech-name">Pimlico</div>
+        <div class="tech-desc">Arbitrum One · UserOp submission · gas estimation · ERC-4337 infrastructure</div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ── SAFETY ── -->
+<!-- ── SMART ACCOUNT / AA ── -->
 <section id="safety" style="padding:120px 0; background:var(--black);">
   <div class="container">
     <div class="section-header">
-      <div class="section-eyebrow">Trust Architecture</div>
-      <h2 class="section-title">Caveat Enforcement Before Every Tip</h2>
-      <p class="section-sub">STAN's Brain implements an off-chain caveat enforcer pattern modelled on ERC-7710 delegation caveats. All five gates must pass before the WDK wallet signs a single transaction. If any gate fails — no funds move.</p>
+      <div class="section-eyebrow">Account Abstraction</div>
+      <h2 class="section-title">Tips Execute as Smart Account UserOps</h2>
+      <p class="section-sub">STAN's tip wallet is a Safe smart account (ERC-4337). The WDK EOA owns the Safe — same BIP-44 key, promoted to smart account controller. Every tip fires as a UserOperation through Pimlico's bundler, not a raw EOA send.</p>
     </div>
 
-    <div class="conviction-levels" style="max-width:780px;margin:0 auto;">
-      <div class="conviction-row" style="grid-template-columns:220px 1fr 180px;">
-        <span class="mono" style="color:var(--amber);font-size:11px;">DAILY SPEND CAP</span>
-        <span style="color:var(--bone-dim);font-size:13px;">Total tips in 24h window ≤ maxDailySpend config</span>
-        <span class="mono" style="font-size:10px;color:var(--bone-dim);">erc20PeriodTransfer</span>
+    <div class="conviction-levels" style="max-width:820px;margin:0 auto 64px;">
+      <div class="conviction-row" style="grid-template-columns:60px 1fr;">
+        <span class="mono" style="color:var(--amber);font-size:13px;line-height:1.8;">01</span>
+        <span style="color:var(--bone-dim);font-size:13px;">Brain clears all 5 conviction gates — daily cap, momentum, tier, cooldown, yield guard</span>
       </div>
-      <div class="conviction-row" style="grid-template-columns:220px 1fr 180px;">
-        <span class="mono" style="color:var(--amber);font-size:11px;">MOMENTUM THRESHOLD</span>
-        <span style="color:var(--bone-dim);font-size:13px;">Stream momentum score must clear configured minimum</span>
-        <span class="mono" style="font-size:10px;color:var(--bone-dim);">beforeHook validation</span>
+      <div class="conviction-row" style="grid-template-columns:60px 1fr;">
+        <span class="mono" style="color:var(--amber);font-size:13px;line-height:1.8;">02</span>
+        <span style="color:var(--bone-dim);font-size:13px;">WDK withdraws USDT from Aave V3 → lands in EOA (WDK primitive)</span>
       </div>
-      <div class="conviction-row" style="grid-template-columns:220px 1fr 180px;">
-        <span class="mono" style="color:var(--amber);font-size:11px;">CONVICTION TIER</span>
-        <span style="color:var(--bone-dim);font-size:13px;">Only HIGH (1.5×) or MAX (2.0×) conviction clears by default</span>
-        <span class="mono" style="font-size:10px;color:var(--bone-dim);">LimitedCalls guard</span>
+      <div class="conviction-row" style="grid-template-columns:60px 1fr;">
+        <span class="mono" style="color:var(--amber);font-size:13px;line-height:1.8;">03</span>
+        <span style="color:var(--bone-dim);font-size:13px;">WDK EOA funds the Safe smart account (tip amount transferred on-chain)</span>
       </div>
-      <div class="conviction-row" style="grid-template-columns:220px 1fr 180px;">
-        <span class="mono" style="color:var(--amber);font-size:11px;">COOLDOWN PERIOD</span>
-        <span style="color:var(--bone-dim);font-size:13px;">Minimum elapsed time since last tip must pass</span>
-        <span class="mono" style="font-size:10px;color:var(--bone-dim);">Timestamp enforcer</span>
+      <div class="conviction-row" style="grid-template-columns:60px 1fr;">
+        <span class="mono" style="color:var(--amber);font-size:13px;line-height:1.8;">04</span>
+        <span style="color:var(--bone-dim);font-size:13px;">Safe sends USDT to creator as an <strong style="color:var(--bone);">ERC-4337 UserOperation</strong> via Pimlico bundler</span>
       </div>
-      <div class="conviction-row" style="grid-template-columns:220px 1fr 180px;">
-        <span class="mono" style="color:var(--amber);font-size:11px;">YIELD GUARD</span>
-        <span style="color:var(--bone-dim);font-size:13px;">Withdraws only accrued yield — never touches principal</span>
-        <span class="mono" style="font-size:10px;color:var(--bone-dim);">beforeHook balance check</span>
+      <div class="conviction-row" style="grid-template-columns:60px 1fr;">
+        <span class="mono" style="color:var(--amber);font-size:13px;line-height:1.8;">05</span>
+        <span style="color:var(--bone-dim);font-size:13px;">UserOp hash is verifiable on-chain — full auditability, upgradeable account</span>
       </div>
     </div>
 
-    <p class="mono" style="text-align:center;margin-top:48px;font-size:12px;color:var(--bone-dim);max-width:620px;margin-left:auto;margin-right:auto;">
-      The Brain holds authority over the WDK wallet and delegates spend only when every constraint is satisfied — enforced before execution, never after.
-    </p>
+    <div class="conviction-formula" style="max-width:680px;margin:0 auto;text-align:center;">
+      <p class="mono" style="font-size:11px;color:var(--bone-dim);line-height:1.8;">
+        WDK_SEED → m/44'/60'/0'/0/0 → EOA owner → Safe 1.4.1 (ERC-4337, EntryPoint v0.7)<br>
+        Tip path: Brain → WDK Aave withdraw → EOA → Safe → UserOp → creator
+      </p>
+    </div>
   </div>
 </section>
 

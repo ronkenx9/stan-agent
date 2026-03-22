@@ -90,6 +90,16 @@ export async function approveUsdt(spenderAddress: string, amountUsdt: number): P
   return result.hash
 }
 
+/**
+ * Fund the Safe smart account with USDT from the WDK EOA.
+ * Called after Aave withdrawal when the smart account is active —
+ * moves the tip amount from the EOA into the Safe before the UserOp fires.
+ */
+export async function fundSmartAccount(saAddress: string, amountUsdt: number): Promise<string> {
+  console.log(`[wallet] Funding Safe smart account ${saAddress} with ${amountUsdt} USDT`)
+  return sendUsdt(saAddress, amountUsdt)
+}
+
 /** Securely dispose the wallet account (wipes key from memory) */
 export function disposeWallet(): void {
   if (_account) {

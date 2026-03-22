@@ -118,21 +118,42 @@ The longer since STAN's last tip, the larger the next one:
 
 This rewards patience and prevents tip spam.
 
-## Safety Architecture — Off-Chain Caveat Enforcement
+## Smart Account Architecture (ERC-4337)
 
-STAN implements a layered off-chain caveat enforcer pattern modelled on ERC-7710 delegation caveats. Before any USDT transfer executes, the Brain runs every gate in sequence. If any gate fails, the tip is rejected — no funds move.
+STAN uses a **Safe smart account** (ERC-4337, EntryPoint v0.7) as its tip execution wallet. The WDK EOA is the Safe owner/signer — same BIP-44 key, promoted to smart account controller.
 
-| Gate | Enforcer Analogue | Rule |
-|------|-------------------|------|
-| Daily spend cap | `erc20PeriodTransfer` | Total tips in 24h window ≤ `maxDailySpend` |
-| Momentum threshold | `beforeHook` validation | Momentum score must exceed configured minimum |
-| Conviction tier | `LimitedCalls` guard | Only HIGH (1.5×) or MAX (2.0×) conviction clears the gate by default |
-| Cooldown period | `Timestamp` enforcer | Minimum elapsed time since last tip before next can fire |
-| Yield guard | `beforeHook` balance check | Withdraw only from accrued yield, never principal (when yield mode enabled) |
+```
+WDK_SEED (BIP-39 mnemonic)
+  └─ m/44'/60'/0'/0/0  ←  WDK EOA  (Aave lending, signing)
+       └─ Owner of Safe smart account  (ERC-4337, Arbitrum One)
+            └─ Tip sends execute as UserOperations via Pimlico bundler
+```
 
-All five gates must pass before the WDK wallet signs a transaction. This is the same **all-or-nothing before-execution principle** as on-chain caveat enforcers — the difference is that STAN enforces these rules in the server-side Brain rather than in an EVM hook, giving users the same spending discipline without requiring smart account infrastructure.
+**Tip execution flow:**
+1. Brain clears all conviction gates (off-chain validation)
+2. If yield enabled: WDK withdraws from Aave → USDT lands in EOA
+3. WDK EOA funds the Safe (transfer to smart account address)
+4. Safe sends USDT to creator as an **ERC-4337 UserOperation**
+5. Pimlico bundler submits the UserOp to the EntryPoint contract
 
-> The Brain is STAN's caveat enforcer stack: it holds authority over the WDK wallet and delegates spend only when every configured constraint is satisfied.
+**Why this matters:**
+- Tips come from a smart contract wallet, not a raw EOA — auditable and upgradeable
+- Safe's modular architecture enables future on-chain spending limit modules
+- UserOp hash is independently verifiable on-chain
+
+## Safety Architecture — Layered Enforcement
+
+STAN enforces a 5-gate conviction stack before any tip executes. All gates must pass or the tip is rejected.
+
+| Gate | Rule |
+|------|------|
+| Daily spend cap | Total tips in 24h window ≤ `maxDailySpend` |
+| Momentum threshold | Stream momentum score must clear configured minimum |
+| Conviction tier | Only HIGH (1.5×) or MAX (2.0×) conviction clears by default |
+| Cooldown period | Minimum elapsed time since last tip must pass |
+| Yield guard | Withdraws only accrued yield — never touches principal |
+
+> The Brain gates run server-side before the WDK signs anything. The Safe smart account adds the on-chain execution layer on top.
 
 ## Tech Stack
 
@@ -141,6 +162,8 @@ All five gates must pass before the WDK wallet signs a transaction. This is the 
 - **Chain**: Arbitrum One (Chain ID 42161)
 - **Token**: USDT (`0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9`)
 - **AI Reasoning**: Groq llama3-8b (optional — one-sentence tip rationale per tip)
-- **Safety**: Off-chain caveat enforcer pattern (5-gate Brain validation before every tx)
+- **Smart Account**: Safe 1.4.1 (ERC-4337, EntryPoint v0.7) via permissionless.js
+- **Bundler**: Pimlico (Arbitrum One) — UserOp submission + gas estimation
+- **Safety**: 5-gate Brain validation (server-side) + Safe smart account (on-chain execution)
 - **Runtime**: Node.js + Express + TypeScript ESM
 - **Dashboard**: GODSEYE amber UI with real-time SSE feed
